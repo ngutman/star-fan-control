@@ -34,6 +34,17 @@ Since I had two different remotes it was rather easy to parse the control packet
 After understanding the RF protocol we can use CC1101 (or any other RF transmitter/transceiver) to control the fans. Check [control_fan.py](https://github.com/ngutman/star-fan-control/blob/master/control_fan.py#L32) for more information.
 
 ## Exposing API and wiring to Home Assistant
+### Python Setup + Running Flask
+```bash
+sudo apt install python3.11
+python -m venv /home/pi/python-env
+source /home/pi/python-env/bin/activate
+pip3 install -r requirements.txt
+flask --app app run --host=0.0.0.0 # (or gunicorn -w 2 app:app)
+```
+
+### Flask and Gunicorn
+
 A very simple flask application is included in [app.py](https://github.com/ngutman/star-fan-control/blob/master/app.py) which exposes `/control/<fan_id>/<command>`. 
 
 A basic [.service](https://github.com/ngutman/star-fan-control/blob/master/fan-control.service) file is included to serve the app using Gunicorn.
