@@ -1,6 +1,9 @@
 # Star 7 Remote RF Control using CC1101
 This is a simple repo containing code to send RF commands to Star (https://star.co.il/) fans using a basic CC1101 Transceiver ([python-cc1101](https://github.com/fphammerle/python-cc1101/tree/master)) wired to a Raspberry PI
 
+<img width="400" alt="image" src="https://github.com/ngutman/star-fan-control/assets/1540134/7e742ebb-1b58-4b45-b7ff-22f6fa828221">
+
+
 ## RF Protocol
 The RF communication was recorded using [URH](https://github.com/jopohl/urh). Each remote got a few switches near the battery place that allows to change the remote "identifier", so several fans in proximity can be controlled by different remotes. 
 
