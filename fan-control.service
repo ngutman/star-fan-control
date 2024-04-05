@@ -1,0 +1,17 @@
+[Unit]
+Description=Fan Control Server
+After=network.target
+
+[Service]
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/fan
+Environment="PATH=/home/pi/python-env/bin"
+ExecStart=/home/pi/python-env/bin/gunicorn --workers 3 --bind 0.0.0.0:5003 app:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
