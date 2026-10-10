@@ -161,11 +161,12 @@ GET /control/fc980rs/<six-hex-digit-prefix>/speed1
 GET /control/fc980rs/<six-hex-digit-prefix>/speed6
 GET /control/fc980rs/<six-hex-digit-prefix>/on
 GET /control/fc980rs/<six-hex-digit-prefix>/off
+GET /control/fc980rs/<six-hex-digit-prefix>/light_toggle
 ```
 
 Use your captured three-byte prefix, not the old five-bit DIP-switch ID. See
 [protocol evidence and remaining hardware checks](docs/protocol-fc980rs.md).
-Light/reverse are not yet supported on this variant. Successful new requests
+The light supports a captured toggle command; reverse is not yet supported. Successful new requests
 return `{"status":"transmitted", ...}`: this confirms transmission completion,
 not reception by the fan. Invalid commands/addresses return HTTP 400; radio
 contention or failure returns 503. Existing valid routes retain their response.
@@ -185,6 +186,15 @@ and Pi address, validate, and reload REST commands/helpers/templates. Zero perce
 sends off; positive percentages select one of six speeds. Turning on selects the
 stored speed or speed 1. Helpers update only after a successful REST action, but
 remain optimistic: the remote and fan send no acknowledgment to this API.
+
+The example also adds **Living Room Fan Light**. Its on/off actions share a
+queued script that sends `light_toggle` only when the tracked state must change.
+Repeated on or off requests therefore do not toggle twice. Merge the script
+entry into `scripts.yaml` if your configuration uses `script: !include scripts.yaml`,
+and reload scripts as well. Initially set `input_boolean.living_room_fan_light_state`
+to the actual light state. Using the physical remote, a missed RF transmission,
+or a receiver power cycle can make this state inaccurate; correct that helper
+before controlling the light again. Updating the helper itself sends no RF.
 
 ### Development and deployment
 

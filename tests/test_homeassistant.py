@@ -51,4 +51,27 @@ class HomeAssistantTests(unittest.TestCase):
                     walk(action)
             elif isinstance(value, dict):
                 for nested in value.values(): walk(nested)
-        walk(self.fan)
+        walk(self.config)
+
+    def test_light_requests_use_one_serialized_script(self):
+        light = self.config['template'][1]['light'][0]
+        script = self.config['script']['living_room_fan_light_set']
+        self.assertEqual(script['mode'], 'queued')
+        for desired in ('on', 'off'):
+            action = light[f'turn_{desired}'][0]
+            self.assertEqual(action['action'], 'script.living_room_fan_light_set')
+            self.assertEqual(action['data']['desired_state'], desired)
+        self.assertEqual(script['sequence'][2]['data']['command'], 'light_toggle')
+
+    def test_light_skips_duplicate_and_unknown_state_requests(self):
+        sequence = self.config['script']['living_room_fan_light_set']['sequence']
+        for desired in ('on', 'off', 'invalid'):
+            for current in ('on', 'off', 'unknown', 'unavailable'):
+                context = {'desired_state': desired, 'states': lambda _: current}
+                guards = [self.render(action['value_template'], **context) == 'True'
+                          for action in sequence[:2]]
+                self.assertEqual(all(guards), desired in ('on', 'off') and
+                                 current in ('on', 'off') and current != desired)
+        for desired in ('on', 'off'):
+            self.assertEqual(self.render(sequence[-1]['action'], desired_state=desired),
+                             f'input_boolean.turn_{desired}')

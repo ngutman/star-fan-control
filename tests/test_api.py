@@ -18,14 +18,15 @@ class APITests(unittest.TestCase):
         self.assertEqual(self.mock.call_count, 2)
 
     def test_new_fan(self):
-        for command in ('on', 'off', 'speed1', 'speed6'):
+        for command in ('on', 'off', 'speed1', 'speed6', 'light_toggle'):
             response = self.client.get(f'/control/fc980rs/fbf905/{command}')
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json['status'], 'transmitted')
 
     def test_invalid_requests_do_not_transmit(self):
         for path in ('/control/no/speed1', '/control/32/power', '/control/10/no',
-                     '/control/fc980rs/31/on', '/control/fc980rs/fbf905/reverse'):
+                     '/control/fc980rs/31/on', '/control/fc980rs/fbf905/reverse',
+                     '/control/fc980rs/fbf905/light_on', '/control/fc980rs/fbf905/light_off'):
             self.assertEqual(self.client.get(path).status_code, 400)
         self.mock.assert_not_called()
 

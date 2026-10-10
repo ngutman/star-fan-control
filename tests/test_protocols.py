@@ -1,4 +1,6 @@
 import unittest
+import json
+from pathlib import Path
 from protocols import fc980rs, star7
 
 
@@ -30,7 +32,7 @@ class ProtocolTests(unittest.TestCase):
                          (captured + '0' * 16) * 2 + '0' * 6)
 
     def test_speed_command_frames_and_burst_order(self):
-        for name, code in [('on', 7), ('off', 8)] + [(f'speed{i}', i) for i in range(1, 7)]:
+        for name, code in [('on', 7), ('off', 8), ('light_toggle', 11)] + [(f'speed{i}', i) for i in range(1, 7)]:
             burst = fc980rs.build('FBF905', name)
             self.assertEqual(len(burst.packets), 4)
             for packet, phase in zip(burst.packets, [code, code, code | 64, code | 64]):
@@ -48,3 +50,13 @@ class ProtocolTests(unittest.TestCase):
                                 ('fbf905', 'power'), ('fbf905', 'speed0'), ('fbf905', 'light')]:
             with self.assertRaises(ValueError):
                 fc980rs.build(prefix, command)
+
+    def test_light_toggle_matches_both_physical_transitions(self):
+        fixtures = json.loads(Path('tests/fixtures/fc980rs-light.json').read_text())
+        self.assertEqual({f['transition'] for f in fixtures}, {'off_to_on', 'on_to_off'})
+        burst = fc980rs.build('fbf905', 'light_toggle')
+        for capture in fixtures:
+            payload = bytes.fromhex(capture['payload'])
+            self.assertIn(payload[-1], (0x0B, 0x4B))
+            packet = burst.packets[0 if payload[-1] == 0x0B else 2]
+            self.assertEqual(f'{int.from_bytes(packet, "big"):0360b}'[:161], capture['symbols'])

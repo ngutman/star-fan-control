@@ -2,7 +2,7 @@
 import re
 from protocols import Transmission
 
-COMMANDS = {f'speed{i}': i for i in range(1, 7)} | {'on': 7, 'off': 8}
+COMMANDS = {f'speed{i}': i for i in range(1, 7)} | {'on': 7, 'off': 8, 'light_toggle': 11}
 
 
 def frame(prefix: bytes, command: int) -> str:
@@ -16,7 +16,7 @@ def build(prefix: str, command: str) -> Transmission:
     if not re.fullmatch(r'[0-9a-fA-F]{6}', prefix):
         raise ValueError('FC980RS prefix must contain exactly six hexadecimal digits')
     if command not in COMMANDS:
-        raise ValueError('Unsupported FC980RS command; use on, off, or speed1 through speed6')
+        raise ValueError('Unsupported FC980RS command; use on, off, light_toggle, or speed1 through speed6')
     address = bytes.fromhex(prefix)
     packets = []
     code = COMMANDS[command]

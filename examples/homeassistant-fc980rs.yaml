@@ -8,6 +8,8 @@ rest_command:
 input_boolean:
   living_room_fan_state:
     name: Living Room Fan State
+  living_room_fan_light_state:
+    name: Living Room Fan Light State
 
 input_number:
   living_room_fan_percentage:
@@ -87,3 +89,41 @@ template:
               - action: input_boolean.turn_on
                 target:
                   entity_id: input_boolean.living_room_fan_state
+  - light:
+      - name: Living Room Fan Light
+        unique_id: living_room_fan_light
+        default_entity_id: light.living_room_fan_light
+        state: "{{ is_state('input_boolean.living_room_fan_light_state', 'on') }}"
+        availability: "{{ states('input_boolean.living_room_fan_light_state') in ['on', 'off'] }}"
+        turn_on:
+          - action: script.living_room_fan_light_set
+            data:
+              desired_state: "on"
+        turn_off:
+          - action: script.living_room_fan_light_set
+            data:
+              desired_state: "off"
+
+# If configuration.yaml uses `script: !include scripts.yaml`, merge this entry
+# into scripts.yaml without the `script:` wrapper.
+script:
+  living_room_fan_light_set:
+    alias: Set Living Room Fan Light
+    description: Toggle RF only when the tracked light state needs to change.
+    mode: queued
+    max: 10
+    sequence:
+      # Evaluate inside the queue so simultaneous on requests cannot double-toggle.
+      - condition: template
+        value_template: "{{ desired_state in ['on', 'off'] }}"
+      - condition: template
+        value_template: "{{ states('input_boolean.living_room_fan_light_state') in ['on', 'off'] and states('input_boolean.living_room_fan_light_state') != desired_state }}"
+      - action: rest_command.living_room_fan_control
+        response_variable: fan_response
+        data:
+          command: light_toggle
+      - condition: template
+        value_template: "{{ fan_response.status == 200 and fan_response.content.status == 'transmitted' }}"
+      - action: "input_boolean.turn_{{ desired_state }}"
+        target:
+          entity_id: input_boolean.living_room_fan_light_state
