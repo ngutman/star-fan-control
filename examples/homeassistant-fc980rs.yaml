@@ -1,0 +1,89 @@
+# Merge these sections into configuration.yaml; do not duplicate top-level keys.
+# Replace a1b2c3 with the three-byte prefix captured from YOUR remote.
+rest_command:
+  living_room_fan_control:
+    url: "http://192.168.1.141:5003/control/fc980rs/a1b2c3/{{ command }}"
+    method: GET
+
+input_boolean:
+  living_room_fan_state:
+    name: Living Room Fan State
+
+input_number:
+  living_room_fan_percentage:
+    name: Living Room Fan Percentage
+    min: 0
+    max: 100
+    step: 1
+
+template:
+  - fan:
+      - name: Living Room Fan
+        unique_id: living_room_fan
+        default_entity_id: fan.living_room_fan
+        state: "{{ is_state('input_boolean.living_room_fan_state', 'on') }}"
+        percentage: "{{ states('input_number.living_room_fan_percentage') | int(0) }}"
+        speed_count: 6
+        # Helpers store quantized speeds; nearest rounding avoids floating-point drift.
+        turn_on:
+          - action: rest_command.living_room_fan_control
+            response_variable: fan_response
+            data:
+              command: "speed{{ [1, ((states('input_number.living_room_fan_percentage') | float(0)) * 6 / 100) | round(0) | int] | max }}"
+          - condition: template
+            value_template: "{{ fan_response.status == 200 and fan_response.content.status == 'transmitted' }}"
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.living_room_fan_percentage
+            data:
+              value: "{{ [1, ((states('input_number.living_room_fan_percentage') | float(0)) * 6 / 100) | round(0) | int] | max * 100 / 6 }}"
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.living_room_fan_state
+        turn_off:
+          - action: rest_command.living_room_fan_control
+            response_variable: fan_response
+            data:
+              command: "off"
+          - condition: template
+            value_template: "{{ fan_response.status == 200 and fan_response.content.status == 'transmitted' }}"
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.living_room_fan_state
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.living_room_fan_percentage
+            data:
+              value: 0
+        set_percentage:
+          - if: "{{ percentage | float(0) <= 0 }}"
+            then:
+              - action: rest_command.living_room_fan_control
+                response_variable: fan_response
+                data:
+                  command: "off"
+              - condition: template
+                value_template: "{{ fan_response.status == 200 and fan_response.content.status == 'transmitted' }}"
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.living_room_fan_state
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.living_room_fan_percentage
+                data:
+                  value: 0
+            else:
+              - action: rest_command.living_room_fan_control
+                response_variable: fan_response
+                data:
+                  command: "speed{{ ((percentage | float(0)) * 6 / 100) | round(0, 'ceil') | int }}"
+              - condition: template
+                value_template: "{{ fan_response.status == 200 and fan_response.content.status == 'transmitted' }}"
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.living_room_fan_percentage
+                data:
+                  value: "{{ (((percentage | float(0)) * 6 / 100) | round(0, 'ceil') | int) * 100 / 6 }}"
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.living_room_fan_state
